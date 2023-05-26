@@ -76,7 +76,7 @@ WSGI_APPLICATION = 'kn.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'kns_27',
+        'NAME': 'kns_5',
         'USER': 'root',
         'PASSWORD': 'mysql',
         'HOST': 'localhost',
