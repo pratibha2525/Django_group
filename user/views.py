@@ -31,10 +31,16 @@ def choice_list(request):
         return Response(serializer.data)
     elif request.method == 'POST':
         serializer = ChoiceSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            'message': 'Choice created successfully.',
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED)
+    return Response({
+        'message': 'Invalid data provided.',
+        'errors': serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def choice_detail(request, pk):
@@ -46,15 +52,22 @@ def choice_detail(request, pk):
     if request.method == 'GET':
         serializer = ChoiceSerializer(choice)
         return Response(serializer.data)
-    elif request.method == 'PUT':
+    if request.method == 'PUT':
         serializer = ChoiceSerializer(choice, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'message': 'Choice updated successfully.',
+                'data': serializer.data
+            })
+        return Response({
+            'message': 'Invalid data provided.',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     elif request.method == 'DELETE':
         choice.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({'message': 'Choice deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET', 'POST'])
@@ -62,9 +75,6 @@ def group_list(request):
     if request.method == 'GET':
         groups = Group.objects.all()
         choices = Choice.objects.values('id','choice_name')
-
-
-        # data = [{"id":x.id,"group_name":x.group_name,"choice":[ {} for j in x.choices_list]} for x in Group.objects.all()]
 
         data = []
 
@@ -81,17 +91,22 @@ def group_list(request):
                         choices_final_list.append(row_dict['choice_list'])
             row_dict['choice_list'] = choices_final_list
             data.append(row_dict)
-
-        # serializer = GroupSerializer(groups, many=True)
         return Response(data)
     elif request.method == 'POST':
         serializer = GroupSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'message': 'Group created successfully.',
+                'data': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            'message': 'Invalid data provided.',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET', 'PUT', 'DELETE'])
+
+@api_view(['GET', 'PUT', 'DELETE','PATCH'])
 def group_detail(request, pk):
     try:
         group = Group.objects.get(pk=pk)
@@ -99,91 +114,51 @@ def group_detail(request, pk):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        serializer = GroupSerializer(group)
-        return Response(serializer.data)
-    elif request.method == 'PUT':
-        serializer = GroupSerializer(group, data=request.data)
+        choices = Choice.objects.values('id', 'choice_name')
+
+        choices_final_list = []
+        for choice_id in group.choices_list:
+            for choice in choices:
+                if choice['id'] == choice_id:
+                    choices_final_list.append({
+                        'id': choice['id'],
+                        'choice_name': choice['choice_name']
+                    })
+
+        data = {
+            'id': group.id,
+            'group_name': group.group_name,
+            'choice_list': choices_final_list
+        }
+        return Response(data)
+    # elif request.method == 'PUT':
+    #     serializer = GroupSerializer(group, data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response({
+    #             'message': 'Group updated successfully.',
+    #             'data': serializer.data
+    #         })
+    #     return Response({
+    #         'message': 'Invalid data provided.',
+    #         'errors': serializer.errors
+    #     }, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'PATCH':
+        serializer = GroupSerializer(group, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'message': 'Group patched successfully.',
+                'data': serializer.data
+            })
+        return Response({
+            'message': 'Invalid data provided.',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
     elif request.method == 'DELETE':
         group.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({'message': 'Group deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
-
-# @api_view(['GET', 'POST', 'PUT', 'DEL'])
-# def groupchoice(request):
-#     if request.method == 'GET':
-#         groupchoice = GroupChoice.objects.all()
-        
-#         data = {}
-        
-#         for group_ob in groupchoice:
-#             group_id = group_ob.group_id.id
-            
-#             if group_id not in data:
-#                 data[group_id] = {
-#                     'group_id': group_id,
-#                     'group_name': group_ob.group_id.group_name,
-#                     'choices': []
-#                 }
-            
-#             data[group_id]['choices'].append({
-#                 'choice_id': group_ob.choice_id.id,
-#                 'choice_name': group_ob.choice_id.name
-#             })
-        
-#         response_data = [{'group': data[group_id]} for group_id in data]
-        
-#         return JsonResponse(response_data, safe=False)
-    
-#     elif request.method == 'POST':
-#         serializer = GroupChoiceSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-#     elif request.method == 'PUT':
-#         serializer = GroupChoiceSerializer(groupchoice, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     elif request.method == 'DELETE':
-#         groupchoice.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-
-# @api_view(['GET', 'POST', 'PUT', 'DELETE'])
-# def groupchoice(request, group_id):
-#     try:
-#         group = Group.objects.get(id=group_id)
-#     except Group.DoesNotExist:
-#         return Response({'message': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-#     if request.method == 'GET':
-#         groupchoice = GroupChoice.objects.filter(group_id=group)
-#         data = {
-#             'id': group_id.id,
-#             'group': {
-#                 'group_id': group.id,
-#                 'group_name': group.group_name,
-#                 'choices': [{'choice_id': gc.choice_id.id, 'choice_name': gc.choice_id.name} for gc in groupchoice]
-#             }
-#         }
-#         return Response(data, status=status.HTTP_200_OK)
-    
-#     elif request.method == 'PUT':
-#         serializer = GroupSerializer(instance=group, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     elif request.method == 'DELETE':
-#         # Implementation for the DELETE method
-#         # Retrieve the data from the request, find the corresponding object, delete it, and return a success message
-        
-#         return Response({'message': 'DELETE method not implemented'}, status=status.HTTP_501_NOT_IMPLEMENTED)
